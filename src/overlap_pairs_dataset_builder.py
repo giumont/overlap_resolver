@@ -178,7 +178,6 @@ def merge_pair_checkpoint_chunks(save_path, save_name, output_file=None, delete_
                 print("CHUNK FILES AND MANIFEST REMOVED:", chunk_dir, "/", manifest_file)
 
     return X, y, event_id, feature_names
-
 def build_pair_dataset_from_root(
     save_path, save_name,
     jet_analysis_branch, tau_analysis_branch,
@@ -186,6 +185,8 @@ def build_pair_dataset_from_root(
     tau_eta_branch, tau_phi_branch, tau_pt_branch,
     jet_truth_label_fn, tau_truth_label_fn,
     root_dir=None,
+    jet_truth_label_branch="recojet_antikt4PFlow_HadronConeExclTruthLabelID",
+    tau_truth_label_branch="tau_truth_IsHadronicTau",
     extra_jet_branches=None,
     extra_tau_branches=None,
     met_branch="met_met___NOSYS",
@@ -242,12 +243,17 @@ def build_pair_dataset_from_root(
     chunk_dir = _chunk_dir_path(save_path, save_name)
     os.makedirs(chunk_dir, exist_ok=True)
 
+    # Inclusione esplicita dei branch di verità e cinematici principali
     core_branches = [
         jet_analysis_branch, tau_analysis_branch,
         jet_eta_branch, jet_phi_branch, jet_pt_branch,
         tau_eta_branch, tau_phi_branch, tau_pt_branch,
     ]
-    
+    if jet_truth_label_branch:
+        core_branches.append(jet_truth_label_branch)
+    if tau_truth_label_branch:
+        core_branches.append(tau_truth_label_branch)
+
     if (compute_met_proj or compute_mt) and met_branch and met_phi_branch:
         core_branches.extend([met_branch, met_phi_branch])
 
