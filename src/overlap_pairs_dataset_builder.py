@@ -178,13 +178,13 @@ def merge_pair_checkpoint_chunks(save_path, save_name, output_file=None, delete_
 
     return X, y, event_id, feature_names
 
-
 def build_pair_dataset_from_root(
     save_path, save_name,
     jet_analysis_branch, tau_analysis_branch,
     jet_eta_branch, jet_phi_branch, jet_pt_branch,
     tau_eta_branch, tau_phi_branch, tau_pt_branch,
     jet_truth_label_fn, tau_truth_label_fn,
+    root_dir=None,
     extra_jet_branches=None,
     extra_tau_branches=None,
     met_branch="met_met___NOSYS",
@@ -200,6 +200,9 @@ def build_pair_dataset_from_root(
     """
     Pipeline completa per la creazione del dataset di coppie.
     """
+    if root_dir is not None:
+        obj_3_1.ROOT_DIR = Path(root_dir)
+
     if label_index_map is None:
         label_index_map = DEFAULT_PAIR_LABEL_INDEX
 
@@ -231,7 +234,7 @@ def build_pair_dataset_from_root(
     loaded = load_files()
     if not loaded:
         if verbose:
-            print("Nessun file .root disponibile.")
+            print(f"Nessun file .root disponibile in: {obj_3_1.ROOT_DIR}")
         return None
 
     manifest_file = _manifest_path(save_path, save_name)
@@ -339,7 +342,6 @@ def build_pair_dataset_from_root(
         "n_files_processed": len(chunk_sizes),
         "manifest_file": manifest_file,
     }
-
 
 def split_pairs_by_event(event_id, train_frac=0.7, val_frac=0.15, test_frac=0.15, seed=42):
     if not np.isclose(train_frac + val_frac + test_frac, 1.0):
