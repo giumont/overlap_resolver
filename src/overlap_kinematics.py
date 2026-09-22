@@ -34,6 +34,7 @@ from truth_vs_reco_params import (
     _plot_hist_curves,
     _finish_object_plot,
 )
+from overlap_met_tau import compute_tau_met_proj, compute_tau_mt
 
 # ======================================================================
 # CONFIGURAZIONE
@@ -64,6 +65,11 @@ JET_PT_BRANCH = "recojet_antikt4PFlow_pt___NOSYS"
 TAU_PT_BRANCH = "tau_pt___NOSYS"
 JET_MASS_BRANCH = "recojet_antikt4PFlow_m___NOSYS"
 JET_N_MUONS_BRANCH = "recojet_antikt4PFlow_n_muons___NOSYS"
+
+# --- Controlli booleani per feature aggiuntive ---
+COMPUTE_PT_RATIO = True
+COMPUTE_MET_PROJ = True
+COMPUTE_MT = True
 
 DR_THRESHOLD_KINEMATICS = 0.4
 
@@ -191,6 +197,10 @@ if PLOT_ANGULAR_VARIABLES:
 def build_pair_kinematics_and_labels(
     jet_pt, jet_eta, jet_phi, jet_mass, jet_n_muons, jet_label,
     tau_pt, tau_eta, tau_phi, tau_nProng, tau_decayMode, tau_charge, tau_label,
+    met=None, met_phi=None,
+    compute_pt_ratio=COMPUTE_PT_RATIO, 
+    compute_met_proj=COMPUTE_MET_PROJ, 
+    compute_mt=COMPUTE_MT
 ):
     jet_pt_ct, tau_pt_ct = ak.unzip(ak.cartesian([jet_pt, tau_pt], nested=True))
     jet_eta_ct, tau_eta_ct = ak.unzip(ak.cartesian([jet_eta, tau_eta], nested=True))
@@ -208,11 +218,9 @@ def build_pair_kinematics_and_labels(
     dr_matrix = delta_r(jet_eta_ct, jet_phi_ct, tau_eta_ct, tau_phi_ct)
     deta_matrix = jet_eta_ct - tau_eta_ct
     dphi_matrix = (jet_phi_ct - tau_phi_ct + np.pi) % (2 * np.pi) - np.pi
-    pt_ratio_matrix = jet_pt_ct / tau_pt_ct
 
-    return {
+    features = {
         "pair_dr": dr_matrix,
-        "pair_pt_ratio": pt_ratio_matrix,
         "pair_deta": deta_matrix,
         "pair_dphi": dphi_matrix,
         "jet_pt": jet_pt_ct,
@@ -230,6 +238,21 @@ def build_pair_kinematics_and_labels(
         "tau_label": tau_label_ct,
     }
 
+    # Calcoli condizionali sfruttando le funzioni importate
+    if compute_pt_ratio:
+        features["pair_pt_ratio"] = jet_pt_ct / tau_pt_ct
+
+    if compute_met_proj and met is not None and met_phi is not None:
+        met_bcast = ak.broadcast_arrays(met, tau_pt_ct)[0]
+        met_phi_bcast = ak.broadcast_arrays(met_phi, tau_phi_ct)[0]
+        features["tau_met_proj"] = compute_tau_met_proj(tau_phi_ct, met_bcast, met_phi_bcast)
+
+    if compute_mt and met is not None and met_phi is not None:
+        met_bcast = ak.broadcast_arrays(met, tau_pt_ct)[0]
+        met_phi_bcast = ak.broadcast_arrays(met_phi, tau_phi_ct)[0]
+        features["tau_mt"] = compute_tau_mt(tau_pt_ct, tau_phi_ct, met_bcast, met_phi_bcast)
+
+    return features
 
 def get_overlapping_pairs_kinematics(pair_info, dr_thr):
     overlap_mask = pair_info["pair_dr"] < dr_thr
@@ -242,6 +265,7 @@ def get_overlapping_pairs_kinematics(pair_info, dr_thr):
     jet_lab = flat_overlap("jet_label").astype(bool)
     tau_lab = flat_overlap("tau_label").astype(bool)
 
+    # (Logica delle cat_masks identica alla tua)
     if AGGREGATE_CATEGORIES:
         cat_masks = {
             "a_jet_true_tau_fake": jet_lab & ~tau_lab,
@@ -257,11 +281,9 @@ def get_overlapping_pairs_kinematics(pair_info, dr_thr):
         }
 
     res = {cat: {} for cat in cat_masks.keys()}
-    variables = [
-        "jet_pt", "jet_eta", "jet_phi", "jet_mass", "jet_n_muons",
-        "tau_pt", "tau_eta", "tau_phi", "tau_nProng", "tau_decayMode", "tau_charge",
-        "pair_dr", "pair_deta", "pair_dphi", "pair_pt_ratio"
-    ]
+    
+    # Recupero dinamico delle chiavi generate (ignorando quelle usate solo per il labeling interno)
+    variables = [k for k in pair_info.keys() if k not in ["jet_label", "tau_label"]]
 
     for cat, cmask in cat_masks.items():
         for var in variables:
@@ -271,12 +293,12 @@ def get_overlapping_pairs_kinematics(pair_info, dr_thr):
 
 
 def merge_pair_kinematics(parts_list):
-    variables = [
-        "jet_pt", "jet_eta", "jet_phi", "jet_mass", "jet_n_muons",
-        "tau_pt", "tau_eta", "tau_phi", "tau_nProng", "tau_decayMode", "tau_charge",
-        "pair_dr", "pair_deta", "pair_dphi", "pair_pt_ratio"
-    ]
+    if not parts_list:
+        return {}
+    
     cat_keys = CATEGORY_KEYS_AGG if AGGREGATE_CATEGORIES else CATEGORY_KEYS
+    # Recupero dinamico delle variabili dal primo slot processato
+    variables = list(parts_list[0][cat_keys[0]].keys())
     
     merged = {cat: {var: [] for var in variables} for cat in cat_keys}
 
@@ -291,7 +313,6 @@ def merge_pair_kinematics(parts_list):
             merged[cat][var] = np.concatenate(arrays) if arrays else np.array([])
 
     return merged
-
 
 # ======================================================================
 # PLOT

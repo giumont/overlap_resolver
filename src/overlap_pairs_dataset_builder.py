@@ -8,12 +8,7 @@ Costruzione del dataset di coppie (jet reco, tau reco) a partire da file
   - conversione in (X, y, event_id) compatibile col preprocessing esistente
   - checkpointing chunked (stesso schema di path di checkpoint_io.py)
   - split train/val/test raggruppato per evento (no data leakage)
-
-Riusa senza modificarle:
-  - obj_3_1.load_files / get_analysis_selection / delta_r
-  - overlap_kinematics.build_pair_kinematics_and_labels
-  - checkpoint_io._strip_npz / _manifest_path / _chunk_dir_path / _chunk_file_path
-  - checkpoint_io._load_chunks_into_arrays
+================================================================================
 """
 
 import os
@@ -32,23 +27,11 @@ from flavour_tag_ml.checkpoint_io import (
 )
 
 
-# ======================================================================
-# SELEZIONE A LIVELLO DI ANALISI (wrapper generico su get_analysis_selection)
-# ======================================================================
-
 def select_analysis_objects(tree, n_entries, jet_analysis_branch, tau_analysis_branch):
-    """
-    Slicing a livello di analisi per jet e tau reco. Wrapper parametrico
-    su get_analysis_selection (obj_3_1).
-    """
     jet_sel = get_analysis_selection(tree, jet_analysis_branch, n_entries)
     tau_sel = get_analysis_selection(tree, tau_analysis_branch, n_entries)
     return jet_sel, tau_sel
 
-
-# ======================================================================
-# TRUTH LABEL DI COPPIA (FF / FT / TF / TT), indicizzata
-# ======================================================================
 
 DEFAULT_PAIR_LABEL_INDEX = {"FF": 0, "FT": 1, "TF": 2, "TT": 3}
 
@@ -73,20 +56,12 @@ def build_pair_truth_index(jet_label_ct, tau_label_ct, label_index_map=None):
     return ak.values_astype(label_idx_ct, np.int64)
 
 
-# ======================================================================
-# INDICE DI EVENTO PER-COPPIA (per grouping anti-leakage)
-# ======================================================================
-
 def build_pair_event_index(pair_info, key="jet_pt", file_offset=0):
     n_events = len(pair_info[key])
     event_id = ak.Array(np.arange(n_events, dtype=np.int64) + file_offset)
     event_id_ct, _ = ak.broadcast_arrays(event_id, pair_info[key])
     return event_id_ct
 
-
-# ======================================================================
-# CONVERSIONE COPPIE -> (X, y, event_id) PER IL PREPROCESSING
-# ======================================================================
 
 def flatten_pairs_for_ml(pair_info, dr_thr, feature_keys, label_idx_ct, event_id_ct):
     overlap_mask = pair_info["pair_dr"] < dr_thr
@@ -103,10 +78,6 @@ def flatten_pairs_for_ml(pair_info, dr_thr, feature_keys, label_idx_ct, event_id
 
     return X, y, event_id
 
-
-# ======================================================================
-# CHECKPOINTING (chunked)
-# ======================================================================
 
 def _save_pair_chunk(chunk_dir, chunk_idx, X, y, event_id):
     os.makedirs(chunk_dir, exist_ok=True)
@@ -208,10 +179,6 @@ def merge_pair_checkpoint_chunks(save_path, save_name, output_file=None, delete_
     return X, y, event_id, feature_names
 
 
-# ======================================================================
-# ORCHESTRATORE: loop sui file .root -> coppie -> overlap -> label -> checkpoint
-# ======================================================================
-
 def build_pair_dataset_from_root(
     save_path, save_name,
     jet_analysis_branch, tau_analysis_branch,
@@ -220,6 +187,11 @@ def build_pair_dataset_from_root(
     jet_truth_label_fn, tau_truth_label_fn,
     extra_jet_branches=None,
     extra_tau_branches=None,
+    met_branch="met_met___NOSYS",
+    met_phi_branch="met_phi___NOSYS",
+    compute_pt_ratio=True,
+    compute_met_proj=True,
+    compute_mt=True,
     feature_keys=None,
     dr_thr=0.4,
     label_index_map=None,
@@ -227,42 +199,10 @@ def build_pair_dataset_from_root(
 ):
     """
     Pipeline completa per la creazione del dataset di coppie.
-
-    Parameters
-    ----------
-    save_path, save_name : str
-        Path e nome base per il salvataggio del checkpoint.
-    jet_analysis_branch, tau_analysis_branch : str
-        Branch booleani usati per lo slicing di selezione dell'analisi.
-    jet_eta_branch, jet_phi_branch, jet_pt_branch : str
-        Branch cinematici trasversali del jet (necessari per calcolare DeltaR,
-        pt_ratio e la struttura del dataset).
-    tau_eta_branch, tau_phi_branch, tau_pt_branch : str
-        Branch cinematici trasversali della tau (necessari per calcolare DeltaR,
-        pt_ratio e la struttura del dataset).
-    jet_truth_label_fn, tau_truth_label_fn : callable
-        Funzioni con firma (awkward.Array eventi, mask selezione) -> awkward.Array bool.
-    extra_jet_branches : dict o list, optional
-        Variabili aggiuntive del jet su cui effettuare solo slicing e broadcasting.
-        Se dict: {"nome_feature": "nome_branch"}. Se list: ["nome_branch", ...].
-    extra_tau_branches : dict o list, optional
-        Variabili aggiuntive della tau su cui effettuare solo slicing e broadcasting.
-        Se dict: {"nome_feature": "nome_branch"}. Se list: ["nome_branch", ...].
-    feature_keys : list of str, optional
-        Elenco ordinato di chiavi da estrarre come colonne di X. Se None, include
-        automaticamente le cinematiche di base e tutte le extra_branches trasmesse.
-    dr_thr : float, default=0.4
-    label_index_map : dict, optional
-    verbose : bool, default=True
-
-    Returns
-    -------
-    dict con n_pairs_saved, n_files_processed, manifest_file.
     """
     if label_index_map is None:
         label_index_map = DEFAULT_PAIR_LABEL_INDEX
 
-    # Normalizzazione extra_jet_branches e extra_tau_branches in dizionari {key: branch}
     if isinstance(extra_jet_branches, (list, tuple)):
         extra_jet_branches = {b: b for b in extra_jet_branches}
     elif extra_jet_branches is None:
@@ -273,13 +213,20 @@ def build_pair_dataset_from_root(
     elif extra_tau_branches is None:
         extra_tau_branches = {}
 
-    # Se non specificato, definisci le colonne di X in modo dinamico
     if feature_keys is None:
         feature_keys = [
-            "pair_dr", "pair_deta", "pair_dphi", "pair_pt_ratio",
+            "pair_dr", "pair_deta", "pair_dphi",
             "jet_pt", "jet_eta", "jet_phi",
             "tau_pt", "tau_eta", "tau_phi",
-        ] + list(extra_jet_branches.keys()) + list(extra_tau_branches.keys())
+        ]
+        if compute_pt_ratio:
+            feature_keys.append("pair_pt_ratio")
+        if compute_met_proj:
+            feature_keys.append("tau_met_proj")
+        if compute_mt:
+            feature_keys.append("tau_mt")
+        feature_keys.extend(list(extra_jet_branches.keys()) + list(extra_tau_branches.keys()))
+        feature_keys = list(dict.fromkeys(feature_keys))
 
     loaded = load_files()
     if not loaded:
@@ -291,13 +238,16 @@ def build_pair_dataset_from_root(
     chunk_dir = _chunk_dir_path(save_path, save_name)
     os.makedirs(chunk_dir, exist_ok=True)
 
-    # Costruzione dinamica della lista completa di branch da estrarre dal TTree
     core_branches = [
         jet_analysis_branch, tau_analysis_branch,
         jet_eta_branch, jet_phi_branch, jet_pt_branch,
         tau_eta_branch, tau_phi_branch, tau_pt_branch,
     ]
-    extra_branches = list(extra_jet_branches.values()) + list(extra_tau_branches.values())
+    
+    if (compute_met_proj or compute_mt) and met_branch and met_phi_branch:
+        core_branches.extend([met_branch, met_phi_branch])
+
+    extra_branches = [b for b in list(extra_jet_branches.values()) + list(extra_tau_branches.values()) if isinstance(b, str)]
     branches = list(dict.fromkeys(core_branches + extra_branches))
 
     chunk_sizes = []
@@ -330,26 +280,35 @@ def build_pair_dataset_from_root(
         tau_phi = a[tau_phi_branch][tau_sel]
         tau_pt = a[tau_pt_branch][tau_sel]
 
-        # Estrazione opzionale per compatibilita' con build_pair_kinematics_and_labels
-        jet_mass = a[extra_jet_branches["jet_mass"]][jet_sel] if "jet_mass" in extra_jet_branches else ak.zeros_like(jet_pt)
-        jet_n_muons = a[extra_jet_branches["jet_n_muons"]][jet_sel] if "jet_n_muons" in extra_jet_branches else ak.zeros_like(jet_pt)
+        jet_mass = a[extra_jet_branches["jet_mass"]][jet_sel] if "jet_mass" in extra_jet_branches and isinstance(extra_jet_branches["jet_mass"], str) else ak.zeros_like(jet_pt)
+        jet_n_muons = a[extra_jet_branches["jet_n_muons"]][jet_sel] if "jet_n_muons" in extra_jet_branches and isinstance(extra_jet_branches["jet_n_muons"], str) else ak.zeros_like(jet_pt)
 
-        tau_nProng = a[extra_tau_branches["tau_nProng"]][tau_sel] if "tau_nProng" in extra_tau_branches else ak.zeros_like(tau_pt)
-        tau_decayMode = a[extra_tau_branches["tau_decayMode"]][tau_sel] if "tau_decayMode" in extra_tau_branches else ak.zeros_like(tau_pt)
-        tau_charge = a[extra_tau_branches["tau_charge"]][tau_sel] if "tau_charge" in extra_tau_branches else ak.zeros_like(tau_pt)
+        tau_nProng = a[extra_tau_branches["tau_nProng"]][tau_sel] if "tau_nProng" in extra_tau_branches and isinstance(extra_tau_branches["tau_nProng"], str) else ak.zeros_like(tau_pt)
+        tau_decayMode = a[extra_tau_branches["tau_decayMode"]][tau_sel] if "tau_decayMode" in extra_tau_branches and isinstance(extra_tau_branches["tau_decayMode"], str) else ak.zeros_like(tau_pt)
+        tau_charge = a[extra_tau_branches["tau_charge"]][tau_sel] if "tau_charge" in extra_tau_branches and isinstance(extra_tau_branches["tau_charge"], str) else ak.zeros_like(tau_pt)
+
+        met_val = a[met_branch] if ((compute_met_proj or compute_mt) and met_branch in a.fields) else None
+        met_phi_val = a[met_phi_branch] if ((compute_met_proj or compute_mt) and met_phi_branch in a.fields) else None
 
         pair_info = build_pair_kinematics_and_labels(
             jet_pt, jet_eta, jet_phi, jet_mass, jet_n_muons, jet_label,
             tau_pt, tau_eta, tau_phi, tau_nProng, tau_decayMode, tau_charge, tau_label,
+            met=met_val, met_phi=met_phi_val,
+            compute_pt_ratio=compute_pt_ratio,
+            compute_met_proj=compute_met_proj,
+            compute_mt=compute_mt,
         )
 
-        # Broadcasting dinamico di eventuali altre variabili generiche passate in extra_jet_branches / extra_tau_branches
         for key, branch_name in extra_jet_branches.items():
+            if key in pair_info:
+                continue
             val = a[branch_name][jet_sel]
             val_ct, _ = ak.broadcast_arrays(val[:, :, None], tau_pt[:, None, :])
             pair_info[key] = val_ct
 
         for key, branch_name in extra_tau_branches.items():
+            if key in pair_info:
+                continue
             val = a[branch_name][tau_sel]
             _, val_ct = ak.broadcast_arrays(jet_pt[:, :, None], val[:, None, :])
             pair_info[key] = val_ct
@@ -381,10 +340,6 @@ def build_pair_dataset_from_root(
         "manifest_file": manifest_file,
     }
 
-
-# ======================================================================
-# SPLIT TRAIN / VAL / TEST SENZA DATA LEAKAGE TRA EVENTI
-# ======================================================================
 
 def split_pairs_by_event(event_id, train_frac=0.7, val_frac=0.15, test_frac=0.15, seed=42):
     if not np.isclose(train_frac + val_frac + test_frac, 1.0):

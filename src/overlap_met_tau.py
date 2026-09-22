@@ -85,6 +85,26 @@ TAU_MET_VARIABLES = [
 ]
 
 # ======================================================================
+# CALCOLO VARIABILI MET (Esportabili)
+# ======================================================================
+
+def compute_dphi_met(tau_phi, met_phi):
+    """Calcola il DeltaPhi tra il tau e la MET in [-pi, pi]."""
+    return (tau_phi - met_phi + np.pi) % (2 * np.pi) - np.pi
+
+def compute_tau_met_proj(tau_phi, met_val, met_phi):
+    """Calcola il MET proiettato lungo la direzione del tau (MET_parallel)."""
+    dphi_met = compute_dphi_met(tau_phi, met_phi)
+    return met_val * np.cos(dphi_met)
+
+def compute_tau_mt(tau_pt, tau_phi, met_val, met_phi):
+    """Calcola la Massa Trasversa (m_T) tra il tau e la MET."""
+    dphi_met = compute_dphi_met(tau_phi, met_phi)
+    return np.sqrt(np.maximum(0, 2 * tau_pt * met_val * (1 - np.cos(dphi_met))))
+
+
+
+# ======================================================================
 # COSTRUZIONE COPPIE E VARIABILI MET
 # ======================================================================
 
@@ -256,17 +276,15 @@ def main():
         met_val = a["met_met___NOSYS"]
         met_phi = a["met_phi___NOSYS"]
 
-        dphi_met = (tau_phi - met_phi + np.pi) % (2 * np.pi) - np.pi
-        
-        tau_met_proj = met_val * np.cos(dphi_met)
-        tau_mt = np.sqrt(np.maximum(0, 2 * tau_pt * met_val * (1 - np.cos(dphi_met))))
+        tau_met_proj = compute_tau_met_proj(tau_phi, met_val, met_phi)
+        tau_mt = compute_tau_mt(tau_pt, tau_phi, met_val, met_phi)
 
         pair_info = build_pair_met_kinematics(
             jet_eta, jet_phi, jet_label,
             tau_eta, tau_phi, tau_label,
             tau_met_proj, tau_mt
         )
-
+        
         pair_met_parts.append(
             get_overlapping_pairs_met(pair_info, DR_THRESHOLD_KINEMATICS)
         )
