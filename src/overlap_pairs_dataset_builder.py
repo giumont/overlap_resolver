@@ -233,7 +233,7 @@ def build_pair_dataset_from_root(
         feature_keys.extend(list(extra_jet_branches.keys()) + list(extra_tau_branches.keys()))
         feature_keys = list(dict.fromkeys(feature_keys))
 
-    loaded = load_files()
+    loaded = obj_3_1.load_files()
     if not loaded:
         if verbose:
             print(f"Nessun file .root disponibile in: {obj_3_1.ROOT_DIR}")
