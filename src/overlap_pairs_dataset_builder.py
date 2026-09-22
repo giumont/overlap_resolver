@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 import awkward as ak
 
-from obj_3_1 import load_files, get_analysis_selection
+import obj_3_1
 from overlap_kinematics import build_pair_kinematics_and_labels
 
 from flavour_tag_ml.checkpoint_io import (
