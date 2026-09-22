@@ -33,7 +33,7 @@ import awkward as ak
 from obj_3_1 import load_files, get_analysis_selection
 from overlap_kinematics import build_pair_kinematics_and_labels
 
-from checkpoint_io import (
+from flavour_tag_ml.checkpoint_io import (
     _manifest_path,
     _chunk_dir_path,
     _chunk_file_path,
