@@ -29,8 +29,8 @@ from flavour_tag_ml.checkpoint_io import (
 
 
 def select_analysis_objects(tree, n_entries, jet_analysis_branch, tau_analysis_branch):
-    jet_sel = get_analysis_selection(tree, jet_analysis_branch, n_entries)
-    tau_sel = get_analysis_selection(tree, tau_analysis_branch, n_entries)
+    jet_sel = obj_3_1.get_analysis_selection(tree, jet_analysis_branch, n_entries)
+    tau_sel = obj_3_1.get_analysis_selection(tree, tau_analysis_branch, n_entries)
     return jet_sel, tau_sel
 
 
