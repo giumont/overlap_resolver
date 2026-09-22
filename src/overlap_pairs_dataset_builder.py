@@ -12,6 +12,7 @@ Costruzione del dataset di coppie (jet reco, tau reco) a partire da file
 """
 
 import os
+from pathlib import Path
 
 import numpy as np
 import awkward as ak
