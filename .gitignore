@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local environment
+.env
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Build e packaging (Setuptools)
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# IDE e Editor
+.vscode/
+.idea/
+
+# Testing e Quality Control
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Unuseful / old code
+/src/old_code/
