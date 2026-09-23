@@ -1,13 +1,13 @@
 RUN METRICS REPORT - 2layers_32_16_dropout0.1_LayerNorm_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CrossEntropyLoss()_weight_loss_True_sampling_strategy_none
 ========================================================================================================================================================================
 run_tag: 2layers_32_16_dropout0.1_LayerNorm_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CrossEntropyLoss()_weight_loss_True_sampling_strategy_none
-timestamp: 2026-09-23T11:14:40
+timestamp: 2026-09-23T12:26:34
 
 Dataset
 -------
   input_dim: None
   n_train: None | n_val: None | n_test: None
-  class balance train (frazione per classe): FF: 0.1010 | FT: 0.7312 | TF: 0.1613 | TT: 0.0065
+  class balance train (frazione per classe): FF: 0.1010 | FT: 0.7312 | TF: 0.1612 | TT: 0.0065
   class balance test (frazione per classe): FF: 0.1004 | FT: 0.7302 | TF: 0.1619 | TT: 0.0076
 
 Modello
@@ -33,21 +33,21 @@ Training
   min_delta_val_loss: 0.0001
   best_model_for_validation: True
   sampling_strategy: none
-  epoche_effettive (early stopping incluso): 43
+  epoche_effettive (early stopping incluso): 44
   epoca_best_model (val loss minima): 38
   best_val_loss: 0.162793
-  final_train_loss: 0.170168
-  final_val_loss: 0.163248
+  final_train_loss: 0.170466
+  final_val_loss: 0.163162
 
 Risultati - Train set (multiclasse)
 -----------------------------------
   n_totale: 376832
   accuracy: 94.91%
   classe  precision     recall         f1    support
-      FF     81.62%     82.13%     0.8187      38066
-      FT     97.30%     98.60%     0.9795     275530
-      TF     92.21%     90.02%     0.9110      60771
-      TT      0.00%      0.00%     0.0000       2465
+      FF     81.63%     82.14%     0.8188      38075
+      FT     97.31%     98.60%     0.9795     275529
+      TF     92.20%     90.02%     0.9110      60764
+      TT      0.00%      0.00%     0.0000       2464
   macro avg   - precision: 67.78%  recall: 67.69%  f1: 0.6773
   weighted avg- precision: 94.26%  recall: 94.91%  f1: 0.9458
 
