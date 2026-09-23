@@ -1,13 +1,13 @@
 RUN METRICS REPORT - 2layers_32_16_dropout0.1_LayerNorm_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none
 ============================================================================================================================================================================
 run_tag: 2layers_32_16_dropout0.1_LayerNorm_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none
-timestamp: 2026-09-23T12:05:33
+timestamp: 2026-09-23T12:06:10
 
 Dataset
 -------
   input_dim: None
   n_train: None | n_val: None | n_test: None
-  class balance train (frazione per classe): FF: 0.1010 | FT: 0.7312 | TF: 0.1613 | TT: 0.0065
+  class balance train (frazione per classe): FF: 0.1011 | FT: 0.7311 | TF: 0.1613 | TT: 0.0065
   class balance test (frazione per classe): FF: 0.1004 | FT: 0.7302 | TF: 0.1619 | TT: 0.0076
 
 Modello
@@ -42,14 +42,14 @@ Training
 Risultati - Train set (multiclasse)
 -----------------------------------
   n_totale: 376832
-  accuracy: 87.79%
+  accuracy: 87.80%
   classe  precision     recall         f1    support
-      FF     67.01%     90.99%     0.7718      38070
-      FT     99.02%     92.81%     0.9582     275523
-      TF     95.98%     64.74%     0.7732      60775
-      TT      4.37%     45.90%     0.0797       2464
+      FF     67.02%     90.98%     0.7718      38086
+      FT     99.02%     92.82%     0.9582     275506
+      TF     95.98%     64.74%     0.7733      60777
+      TT      4.36%     45.88%     0.0797       2463
   macro avg   - precision: 66.60%  recall: 73.61%  f1: 0.6457
-  weighted avg- precision: 94.68%  recall: 87.79%  f1: 0.9038
+  weighted avg- precision: 94.68%  recall: 87.80%  f1: 0.9038
 
 Risultati - Test set (multiclasse)
 ----------------------------------

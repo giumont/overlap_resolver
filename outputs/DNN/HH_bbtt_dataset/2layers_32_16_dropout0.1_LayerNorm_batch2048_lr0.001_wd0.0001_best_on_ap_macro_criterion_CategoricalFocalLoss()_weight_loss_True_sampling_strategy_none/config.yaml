@@ -1,7 +1,7 @@
 run_name: 2layers_32_16_dropout0.1_LayerNorm_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none
 run_tag: 2layers_32_16_dropout0.1_LayerNorm_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none
-timestamp: '2026-09-23T12:05:35'
-repo_commit: 8c3863adc98e9110edae29c357750f1d64375b33
+timestamp: '2026-09-23T12:06:11'
+repo_commit: 2596a5049faa2d0bc138f67aebc9d02caf85ab5d
 data:
   input_dir: /content/drive/MyDrive/overlap_resolver/datas/np_arrays/HH_bbtt
   trainset_x_name: X_train_normalized.npy
