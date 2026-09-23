@@ -1,7 +1,7 @@
 RUN METRICS REPORT - 2layers_32_16_dropout0.1_LayerNorm_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none
 ============================================================================================================================================================================
 run_tag: 2layers_32_16_dropout0.1_LayerNorm_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none
-timestamp: 2026-09-23T11:44:37
+timestamp: 2026-09-23T12:05:33
 
 Dataset
 -------
@@ -42,14 +42,14 @@ Training
 Risultati - Train set (multiclasse)
 -----------------------------------
   n_totale: 376832
-  accuracy: 87.80%
+  accuracy: 87.79%
   classe  precision     recall         f1    support
-      FF     67.00%     90.98%     0.7717      38067
-      FT     99.02%     92.82%     0.9582     275530
-      TF     95.98%     64.74%     0.7732      60768
-      TT      4.38%     45.93%     0.0799       2467
-  macro avg   - precision: 66.59%  recall: 73.62%  f1: 0.6458
-  weighted avg- precision: 94.68%  recall: 87.80%  f1: 0.9038
+      FF     67.01%     90.99%     0.7718      38070
+      FT     99.02%     92.81%     0.9582     275523
+      TF     95.98%     64.74%     0.7732      60775
+      TT      4.37%     45.90%     0.0797       2464
+  macro avg   - precision: 66.60%  recall: 73.61%  f1: 0.6457
+  weighted avg- precision: 94.68%  recall: 87.79%  f1: 0.9038
 
 Risultati - Test set (multiclasse)
 ----------------------------------
