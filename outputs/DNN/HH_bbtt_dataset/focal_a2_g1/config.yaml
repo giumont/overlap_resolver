@@ -1,0 +1,79 @@
+run_name: focal_a2_g1
+run_tag: focal_a2_g1
+timestamp: '2026-09-24T14:24:55'
+repo_commit: 5e3652158df545bdb9894ecb3ad3afa75e0ec6bd
+data:
+  input_dir: /content/drive/MyDrive/overlap_resolver/datas/np_arrays/HH_bbtt
+  trainset_x_name: X_train_normalized.npy
+  trainset_y_name: y_train_normalized.npy
+  valset_x_name: X_val_normalized.npy
+  valset_y_name: y_val_normalized.npy
+  testset_x_name: X_test_normalized.npy
+  testset_y_name: y_test_normalized.npy
+  output_dir: null
+  n_train: null
+  n_val: null
+  n_test: null
+  sub_trainset_name: null
+  sub_valset_name: null
+  sub_testset_name: null
+  n_overlap_couples: 377567
+  n_features: 21
+  class_names:
+  - FF
+  - FT
+  - TF
+  - TT
+model:
+  name: MLPMultiTagger
+  hidden_dims:
+  - 32
+  - 16
+  num_classes: 4
+  norm_layer: LayerNorm
+  dropout: 0.1
+  activ_func: ReLU
+paths:
+  model_dir: /content/drive/MyDrive/overlap_resolver/models/HH_bbtt_dataset
+  model_name: best_model_2layers_32_16_dropout0.1_LayerNorm_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none.pt
+  model_path: /content/drive/MyDrive/overlap_resolver/models/HH_bbtt_dataset/best_model_2layers_32_16_dropout0.1_LayerNorm_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none.pt
+  graphics_dir: /content/drive/MyDrive/overlap_resolver/graphics/model_eval/HH_bbtt_dataset
+other:
+  random_seed: 42
+  device: cuda
+  atlas_style: true
+  background_rejection_eff_range:
+  - 0.2
+  - 1.0
+  working_point_targets:
+  - 0.7
+  - 0.75
+  - 0.8
+  - 0.85
+  - 0.9
+  - 0.97
+training:
+  criterion: CategoricalFocalLoss
+  alpha_power: 2.0
+  gamma: 1.0
+  class_weights_p1: Tensor
+  optimizer:
+    name: AdamW
+    lr: 0.001
+    weight_decay: 0.0001
+  scheduler:
+    name: ReduceLROnPlateau
+    factor: 0.7
+    patience: 5
+    mode: max
+  max_epochs: 50
+  early_stop_patience: 10
+  min_delta_val_loss: 0.0001
+  model_selection_metric: ap_macro
+  best_val_ap_macro: 0.6734147809802012
+  best_val_ap_per_class:
+  - 0.7383035795517582
+  - 0.9922083615261873
+  - 0.9434171725971194
+  - 0.019730010245739726
+  best_val_f1_macro: 0.17380814176423182
