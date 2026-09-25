@@ -1,0 +1,61 @@
+run_name: focal_a0.75_g2
+run_tag: focal_a0.75_g2
+timestamp: '2026-09-25T10:20:51'
+repo_commit: cc1de70b582263c62d3e552a618bf0c59a5b5415
+data:
+  input_dir: /content/drive/MyDrive/overlap_resolver/datas/np_arrays/HH_bbtt
+  trainset_x_name: X_train_normalized.npy
+  trainset_y_name: y_train_normalized.npy
+  valset_x_name: X_val_normalized.npy
+  valset_y_name: y_val_normalized.npy
+  testset_x_name: X_test_normalized.npy
+  testset_y_name: y_test_normalized.npy
+  output_dir: null
+  n_train: null
+  n_val: null
+  n_test: null
+  sub_trainset_name: null
+  sub_valset_name: null
+  sub_testset_name: null
+  n_overlap_couples: 377567
+  n_features: 21
+  class_names:
+  - FF
+  - FT
+  - TF
+  - TT
+model:
+  name: MLPMultiTagger
+  hidden_dims:
+  - 32
+  - 16
+  num_classes: 4
+  norm_layer: LayerNorm
+  dropout: 0.1
+  activ_func: ReLU
+training:
+  criterion: CategoricalFocalLoss
+  alpha_power: 0.75
+  gamma: 2.0
+  class_weights_p1: Tensor
+  optimizer:
+    name: AdamW
+    lr: 0.001
+    weight_decay: 0.0001
+  scheduler:
+    name: ReduceLROnPlateau
+    factor: 0.7
+    patience: 5
+    mode: max
+  max_epochs: 50
+  early_stop_patience: 10
+  min_delta_val_loss: 0.0001
+  model_selection_metric: ap_macro
+  seed: 42
+  best_val_ap_macro: 0.7162710036198233
+  best_val_ap_per_class:
+  - 0.8569335290796674
+  - 0.996347559132526
+  - 0.952013051679967
+  - 0.05978987458713285
+  best_val_f1_macro: 0.6897991942072327
