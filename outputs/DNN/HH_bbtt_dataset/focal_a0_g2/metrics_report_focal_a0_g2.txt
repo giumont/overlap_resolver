@@ -1,0 +1,109 @@
+RUN METRICS REPORT - focal_a0_g2
+================================
+run_tag: focal_a0_g2
+timestamp: 2026-09-25T08:55:21
+
+Dataset
+-------
+  input_dim: None
+  n_train: None | n_val: None | n_test: None
+  class balance train (frazione per classe): FF: 0.1011 | FT: 0.7311 | TF: 0.1613 | TT: 0.0066
+  class balance test (frazione per classe): FF: 0.1004 | FT: 0.7302 | TF: 0.1619 | TT: 0.0076
+
+Modello
+-------
+  name: MLPMultiTagger
+  hidden_dims: (32, 16)
+  num_classes: 4
+  norm_layer: <class 'torch.nn.modules.normalization.LayerNorm'>
+  dropout: 0.1
+  activ_func: ReLU
+  n_parametri_totali: 1396
+  n_parametri_allenabili: 1396
+
+Training
+--------
+  criterion: CategoricalFocalLoss
+  alpha_power: 0.0
+  gamma: 2.0
+  class_weights_p1: tensor([ 2.4740,  0.3419,  1.5504, 38.2153], device='cuda:0')
+  optimizer: {'name': 'AdamW', 'lr': 0.001, 'weight_decay': 0.0001}
+  scheduler: {'name': 'ReduceLROnPlateau', 'factor': 0.7, 'patience': 5, 'mode': 'max'}
+  max_epochs: 50
+  early_stop_patience: 10
+  min_delta_val_loss: 0.0001
+  model_selection_metric: ap_macro
+  seed: 42
+  best_val_ap_macro: 0.717226545368219
+  best_val_ap_per_class: [0.8727302966341552, 0.9968978081012114, 0.9556455608047589, 0.04363251593275022]
+  best_val_f1_macro: 0.6802801835050314
+  model_selection_metric: ap_macro
+  epoche_effettive (early stopping incluso): 47
+  epoca_best_model (secondo model_selection_metric='ap_macro'): 36 (valore selezione: 0.717227)
+  val_loss a epoca best_model: 0.067842
+  [diagnostico] epoca di val loss minima (diversa da best_model perché model_selection_metric != 'mean'): 45 (val_loss: 0.067376)
+  final_train_loss: 0.070304
+  final_val_loss: 0.067584
+
+Risultati - Train set (multiclasse)
+-----------------------------------
+  n_totale: 376832
+  accuracy: 94.92%
+  classe  precision     recall         f1    support
+      FF     80.77%     83.24%     0.8199      38087
+      FT     97.51%     98.47%     0.9799     275510
+      TF     92.13%     90.00%     0.9106      60765
+      TT     82.35%      0.57%     0.0113       2470
+  macro avg   - precision: 88.19%  recall: 68.07%  f1: 0.6804
+  weighted avg- precision: 94.85%  recall: 94.92%  f1: 0.9462
+
+Risultati - Test set (multiclasse)
+----------------------------------
+  n_totale: 81083
+  accuracy: 94.77%
+  classe  precision     recall         f1    support
+      FF     80.28%     83.62%     0.8192       8140
+      FT     97.48%     98.35%     0.9791      59204
+      TF     91.72%     89.94%     0.9082      13125
+      TT     33.33%      0.16%     0.0032        614
+  macro avg   - precision: 75.71%  recall: 68.02%  f1: 0.6774
+  weighted avg- precision: 94.34%  recall: 94.77%  f1: 0.9442
+
+Working points one-vs-rest (test set) - efficienza di segnale fissata
+---------------------------------------------------------------------
+
+  --- classe: FF ---
+  sig. eff. WP  threshold   eff. reale   bkg eff.  bkg rejection
+           70%     0.5491       69.98%      1.19%          84.13
+           75%     0.5194       74.99%      1.44%          69.34
+           80%     0.4766       80.01%      1.82%          54.80
+           85%     0.4232       84.98%      2.42%          41.26
+           90%     0.3548       90.00%      3.68%          27.21
+           97%     0.1898       97.00%     11.34%           8.82
+
+  --- classe: FT ---
+  sig. eff. WP  threshold   eff. reale   bkg eff.  bkg rejection
+           70%     0.8815       69.97%      0.37%         270.11
+           75%     0.8595       74.90%      0.47%         214.50
+           80%     0.8295       80.02%      0.66%         151.94
+           85%     0.7913       85.01%      0.90%         110.50
+           90%     0.7359       90.02%      1.46%          68.37
+           97%     0.5431       97.00%      4.37%          22.86
+
+  --- classe: TF ---
+  sig. eff. WP  threshold   eff. reale   bkg eff.  bkg rejection
+           70%     0.7457       70.05%      0.45%         223.55
+           75%     0.7057       74.96%      0.55%         181.71
+           80%     0.6470       80.01%      0.69%         144.90
+           85%     0.5706       85.00%      0.93%         107.02
+           90%     0.4228       90.00%      1.57%          63.63
+           97%     0.2011       97.00%      8.92%          11.21
+
+  --- classe: TT ---
+  sig. eff. WP  threshold   eff. reale   bkg eff.  bkg rejection
+           70%     0.0704       70.03%     15.19%           6.58
+           75%     0.0533       74.92%     17.89%           5.59
+           80%     0.0421       79.97%     23.59%           4.24
+           85%     0.0302       85.02%     36.39%           2.75
+           90%     0.0227       90.07%     51.04%           1.96
+           97%     0.0060       97.07%     89.57%           1.12
