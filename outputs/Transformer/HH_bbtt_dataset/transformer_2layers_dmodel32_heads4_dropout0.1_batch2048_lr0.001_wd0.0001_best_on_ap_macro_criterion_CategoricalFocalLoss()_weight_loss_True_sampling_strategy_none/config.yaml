@@ -1,7 +1,7 @@
 run_name: transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none
 run_tag: transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none
-timestamp: '2026-09-25T10:15:49'
-repo_commit: 6d656f865dc7d31c510f60fc9adc76e5da6a7b12
+timestamp: '2026-09-27T11:31:56'
+repo_commit: 01fcb435eb0d576115309b42cdeeb339922e41b3
 data:
   input_dir: /content/drive/MyDrive/overlap_resolver/datas/np_arrays/HH_bbtt
   trainset_x_name: X_train_normalized.npy
