@@ -1,0 +1,80 @@
+RUN METRICS REPORT (EXTERNAL EVAL) - transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CrossEntropyLoss()_weight_loss_True_sampling_strategy_none_EVAL_bkg_tt
+================================================================================================================================================================================================================
+run_tag: transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CrossEntropyLoss()_weight_loss_True_sampling_strategy_none_EVAL_bkg_tt
+Dataset esterno al training: train+val+test di INPUT_DIR sono stati unificati in un unico blocco usato SOLO per valutazione (nessun training/fine-tuning eseguito su questi dati).
+
+Dataset
+-------
+  input_dir: /content/drive/MyDrive/overlap_resolver/datas/np_arrays/bkg_tt
+  n_eval: 102468 | n_features: 21
+  class balance eval (frazione per classe): FF: 0.7502 | FT: 0.0007 | TF: 0.2430 | TT: 0.0062
+
+Modello (pesi provenienti da un'altra run)
+------------------------------------------
+  name: SetTransformerTagger
+  feature_groups: [[0, 1, 2, 3], [4, 5, 6, 7, 8, 9], [10, 11, 12, 13, 14, 15, 16, 17, 18], [19, 20]]
+  num_classes: 4
+  d_model: 32
+  n_heads: 4
+  n_layers: 2
+  dropout: 0.1
+  activ_func: GELU
+  source_model_path: /content/drive/MyDrive/overlap_resolver/models/HH_bbtt_dataset/best_model_transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CrossEntropyLoss()_weight_loss_True_sampling_strategy_none.pt
+  source_run_tag: transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CrossEntropyLoss()_weight_loss_True_sampling_strategy_none
+  n_parametri_totali: 27844
+  n_parametri_allenabili: 27844
+
+Training
+--------
+  Nessun training in questa run: solo inferenza/valutazione.
+
+Risultati - Eval set (multiclasse, dataset esterno unificato)
+-------------------------------------------------------------
+  n_totale: 102468
+  accuracy: 2.85%
+  classe  precision     recall         f1    support
+      FF     98.33%      2.23%     0.0436      76868
+      FT      0.08%     83.33%     0.0015         72
+      TF     95.53%      2.92%     0.0566      24896
+      TT      1.91%     66.46%     0.0371        632
+  macro avg   - precision: 48.96%  recall: 38.73%  f1: 0.0347
+  weighted avg- precision: 96.99%  recall: 2.85%  f1: 0.0467
+
+Working points one-vs-rest (eval set) - efficienza di segnale fissata
+---------------------------------------------------------------------
+
+  --- classe: FF ---
+  sig. eff. WP  threshold   eff. reale   bkg eff.  bkg rejection
+           70%     0.0058       70.00%     36.74%           2.72
+           75%     0.0044       75.00%     46.04%           2.17
+           80%     0.0033       80.00%     57.00%           1.75
+           85%     0.0024       84.99%     69.55%           1.44
+           90%     0.0017       90.00%     82.89%           1.21
+           97%     0.0009       97.00%     97.57%           1.02
+
+  --- classe: FT ---
+  sig. eff. WP  threshold   eff. reale   bkg eff.  bkg rejection
+           70%     0.7854       69.44%     53.16%           1.88
+           75%     0.6659       75.00%     64.75%           1.54
+           80%     0.5218       80.56%     73.43%           1.36
+           85%     0.4172       84.72%     77.97%           1.28
+           90%     0.3095       90.28%     81.75%           1.22
+           97%     0.1527       97.22%     87.19%           1.15
+
+  --- classe: TF ---
+  sig. eff. WP  threshold   eff. reale   bkg eff.  bkg rejection
+           70%     0.0195       70.00%     13.22%           7.56
+           75%     0.0150       75.00%     18.07%           5.53
+           80%     0.0111       80.00%     23.79%           4.20
+           85%     0.0077       85.00%     31.12%           3.21
+           90%     0.0046       90.00%     41.92%           2.39
+           97%     0.0011       97.00%     75.28%           1.33
+
+  --- classe: TT ---
+  sig. eff. WP  threshold   eff. reale   bkg eff.  bkg rejection
+           70%     0.4289       69.94%     22.78%           4.39
+           75%     0.3680       75.00%     25.31%           3.95
+           80%     0.2957       80.06%     28.66%           3.49
+           85%     0.2229       84.97%     32.80%           3.05
+           90%     0.1511       90.03%     39.33%           2.54
+           97%     0.0725       96.99%     57.65%           1.73
