@@ -1,0 +1,72 @@
+run_name: transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none_EVAL_bkg_tt
+run_tag: transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none_EVAL_bkg_tt
+timestamp: '2026-09-27T11:47:58'
+repo_commit: 5c8c265ea7c70bd63b0e43544a3ac2d626cbb277
+data:
+  input_dir: /content/drive/MyDrive/overlap_resolver/datas/np_arrays/bkg_tt
+  trainset_x_name: X_train_normalized.npy
+  trainset_y_name: y_train_normalized.npy
+  valset_x_name: X_val_normalized.npy
+  valset_y_name: y_val_normalized.npy
+  testset_x_name: X_test_normalized.npy
+  testset_y_name: y_test_normalized.npy
+  note: 'Dataset esterno al training: train+val+test di INPUT_DIR sono stati unificati
+    in un unico blocco usato SOLO per valutazione (nessun training/fine-tuning eseguito
+    su questi dati).'
+  n_eval: 102468
+  n_features: 21
+  class_names:
+  - FF
+  - FT
+  - TF
+  - TT
+model:
+  name: SetTransformerTagger
+  feature_groups:
+  - - 0
+    - 1
+    - 2
+    - 3
+  - - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+  - - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+  - - 19
+    - 20
+  num_classes: 4
+  d_model: 32
+  n_heads: 4
+  n_layers: 2
+  dropout: 0.1
+  activ_func: GELU
+  source_model_path: /content/drive/MyDrive/overlap_resolver/models/HH_bbtt_dataset/best_model_transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none.pt
+  source_run_tag: transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none
+training:
+  note: 'Nessun training in questa run: solo inferenza/valutazione.'
+paths:
+  model_dir: /content/drive/MyDrive/overlap_resolver/models/HH_bbtt_dataset
+  model_name: best_model_transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none.pt
+  model_path: /content/drive/MyDrive/overlap_resolver/models/HH_bbtt_dataset/best_model_transformer_2layers_dmodel32_heads4_dropout0.1_batch2048_lr0.001_wd0.0001_best_on_ap_macro_criterion_CategoricalFocalLoss()_weight_loss_True_sampling_strategy_none.pt
+  graphics_dir: /content/drive/MyDrive/overlap_resolver/graphics/model_eval/EVAL_bkg_tt
+other:
+  random_seed: 42
+  device: cuda
+  atlas_style: true
+  working_point_targets:
+  - 0.7
+  - 0.75
+  - 0.8
+  - 0.85
+  - 0.9
+  - 0.97
