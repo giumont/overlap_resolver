@@ -88,9 +88,11 @@ except Exception:
 # CONFIGURAZIONE
 # ======================================================================
 
-ROOT_DIR = Path("HH_bbtt")
+#ROOT_DIR = Path("../root_datasets/HH_bbtt")
+ROOT_DIR = Path("../root_datasets/bkg_tt")
 
-FILE_PREFIX = "output_GGF_mc23a_bypass_noOR_0000"
+#FILE_PREFIX = "output_GGF_mc23a_bypass_noOR_0000"
+FILE_PREFIX = "output_TTBAR_mc23a_bypass_noOR_0000"
 FILE_SUFFIX = ".root"
 
 TREE_NAME = "AnalysisMiniTree"
@@ -164,7 +166,7 @@ PHI_HIST_MIN = -np.pi
 PHI_HIST_MAX = np.pi
 PHI_HIST_BINSIZE = 0.1
 
-OUTPUT_DIR = Path("output/obj_3.1/combinatory_level")
+OUTPUT_DIR = Path("../output/discriminance_analysis/combinatory_level")
 
 
 # ======================================================================

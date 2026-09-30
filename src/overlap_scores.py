@@ -27,7 +27,7 @@ from truth_vs_reco_params import label_jets_and_taus, _plot_hist_curves
 # CONFIGURAZIONE
 # ======================================================================
 
-OUTPUT_DIR = Path("output/obj_3.1/overlap_scores")
+OUTPUT_DIR = Path("../output/discriminance_analysis/overlap_scores")
 DR_THRESHOLD = 4.0
 
 JET_SCORE_BRANCH = "recojet_antikt4PFlow_ftag_quantile_GN2v01_Continuous"
@@ -38,7 +38,7 @@ JET_TRUTH_LABEL_B_VALUE = 5
 # - "tau_GNTauScoreSigTrans_v0prune"
 # - "tau_RNNJetScoreSigTrans"
 # - "tau_RNNEleScoreSigTrans_v1"
-TAU_SCORE_BRANCH =  "tau_GNTauScoreSigTrans_v0prune"
+TAU_SCORE_BRANCH =  "tau_RNNEleScoreSigTrans_v1"
 TAU_TRUTH_MATCH_BRANCH = "tau_truth_IsHadronicTau"
 
 CATEGORY_LABELS = {

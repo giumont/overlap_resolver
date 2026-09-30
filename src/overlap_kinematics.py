@@ -59,7 +59,7 @@ TRUTH_TAU_ETA_BRANCH = "truthtau_eta_vis"
 TRUTH_TAU_PHI_BRANCH = "truthtau_phi_vis"
 DR_TRUTH_MATCH_TAU = 0.2
 
-OUTPUT_DIR = Path("output/obj_3.1/pair_kinematics_categories")
+OUTPUT_DIR = Path("../output/discriminance_analysis/pair_kinematics_categories")
 
 JET_PT_BRANCH = "recojet_antikt4PFlow_pt___NOSYS"
 TAU_PT_BRANCH = "tau_pt___NOSYS"
@@ -74,7 +74,7 @@ COMPUTE_MT = True
 DR_THRESHOLD_KINEMATICS = 0.4
 
 PT_HIST_MIN = 0.0
-PT_HIST_MAX = 200_000.0
+PT_HIST_MAX = 500_000.0
 PT_HIST_BINSIZE = 10_000
 
 ETA_HIST_MIN = -5.0
@@ -343,7 +343,9 @@ def save_pair_kinematics_plots(merged_data, dr_threshold):
             out_dir = Path(config["out_dir"])
             if AGGREGATE_CATEGORIES:
                 out_dir = out_dir / "aggregated"
-            out_dir.mkdir(parents=True, exist_ok=True)
+
+            plot_dir = out_dir / f"DR_max_{DR_THRESHOLD_KINEMATICS}"
+            plot_dir.mkdir(parents=True, exist_ok=True)
             
             y_scale = config["y_scale"]
 
@@ -378,7 +380,7 @@ def save_pair_kinematics_plots(merged_data, dr_threshold):
             suffix_agg = "_aggregated" if AGGREGATE_CATEGORIES else ""
 
             out_path = (
-                out_dir 
+                plot_dir
                 / f"pair_kinematics_{var_id}_"
                 f"{JET_SELECTION_MODE}{suffix}{suffix_cut}{suffix_agg}.png"
             )
@@ -388,7 +390,7 @@ def save_pair_kinematics_plots(merged_data, dr_threshold):
 
             print(f"[OK] Plot salvato in: {out_path}")
 
-def save_scatter_plots(merged_data, dr_threshold):
+def save_scatter_plots(merged_data, hreshold):
     if not HAS_MPL:
         return
     
@@ -429,7 +431,7 @@ def save_scatter_plots(merged_data, dr_threshold):
 
         ax.set_xlabel(r"$\Delta R$")
         ax.set_ylabel(ylabel)
-        ax.set_title(f"Scatter: $\\Delta R$ vs {ylabel} ($\\Delta R < {dr_threshold}$)")
+        ax.set_title(f"Scatter: $\\Delta R$ vs {ylabel} ($\\Delta R < {DR_THRESHOLD_KINEMATICS}$)")
         
         # Mantiene la scala logaritmica per i pT come da configurazione originale
         ax.set_yscale("log")

@@ -47,7 +47,7 @@ TAU_SCORE_WP85_THRESHOLD = 0.163094
 TAU_PT_BRANCH = "tau_pt___NOSYS"
 
 DR_THRESHOLD_KINEMATICS = 0.4
-OUTPUT_DIR = Path("output/obj_3.1/pair_kinematics_categories/met_tau")
+OUTPUT_DIR = Path("output/discriminance_analysis/pair_kinematics_categories/met_tau")
 
 # Limiti istogrammi aggiuntivi
 MET_PROJ_HIST_MIN = -300_000.0
