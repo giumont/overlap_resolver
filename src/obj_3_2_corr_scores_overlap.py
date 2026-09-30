@@ -39,7 +39,7 @@ except Exception:
     HAS_MPL = False
 
 import params
-from obj_3_1 import section, load_files, get_analysis_selection, delta_r
+from obj_3_1_geometric_overlap import section, load_files, get_analysis_selection, delta_r
 
 
 def compute_correlation_ratio(categories, measurements):

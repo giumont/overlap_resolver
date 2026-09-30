@@ -49,10 +49,10 @@ except Exception:
     HAS_MPL = False
 
 import params
-from obj_3_1 import section, load_files, get_analysis_selection, summarize
+from obj_3_1_geometric_overlap import section, load_files, get_analysis_selection, summarize
 
 sys.path.append(str(params.FLAVOUR_TAGGING_DIR))
-from src.graphics import (
+from flavour_tag_ml.graphics import (
     plot_roc_curve,
     plot_background_rejection,
     plot_score_distribution,

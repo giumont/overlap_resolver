@@ -70,7 +70,7 @@ from params import (
     TRUTH_DR_HIST_BINSIZE, TRUTH_PT_HIST_MAX,
     NORMALIZE_TRUTH_HISTOGRAMS, OBJECT_KINEMATICS_VARIABLES,
 )
-from obj_3_1 import (
+from obj_3_1_geometric_overlap import (
     section, load_files, get_analysis_selection, delta_r, summarize,
     print_shoulder_table,
 )

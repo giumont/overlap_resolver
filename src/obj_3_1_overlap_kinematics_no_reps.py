@@ -72,13 +72,13 @@ from params import (
     OUTPUT_DIR_NO_REPS, VARIABLE_PLOT_CONFIG_NO_REPS,
     JET_VARIABLES_NO_REPS, TAU_VARIABLES_NO_REPS, PAIR_VARIABLES_NO_REPS,
 )
-from obj_3_1 import section, load_files, get_analysis_selection, delta_r
-from truth_vs_reco_params import (
+from obj_3_1_geometric_overlap import section, load_files, get_analysis_selection, delta_r
+from src.other_code.truth_vs_reco_params import (
     label_jets_and_taus,
     _plot_hist_curves,
     _finish_object_plot,
 )
-from overlap_met_tau import compute_tau_met_proj, compute_tau_mt
+from obj_3_1_overlap_met_tau import compute_tau_met_proj, compute_tau_mt
 
 
 def greedy_match_no_reps_indices(jet_eta, jet_phi, tau_eta, tau_phi, dr_thr):

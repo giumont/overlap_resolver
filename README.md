@@ -376,7 +376,7 @@ The ROOT files are not part of the repository; copy them under
 
 ## Known issues / things to check
 
-* Scripts import their helpers as `from obj_3_1 import …` and
+* Scripts import their helpers as `from obj_3_1_geometric_overlap import …` and
   `from truth_vs_reco_params import …`, and some docstrings refer to
   `overlap_kinematics.py`, `tau_score_analysis.py`, `root_file_analysis.py`
   (without the numeric prefix). Python cannot import module names starting with

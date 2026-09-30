@@ -44,7 +44,7 @@ from params import (
     TARGET_EFFICIENCIES, WP_COLORS, JET_QUANTILES_MAP,
     CATEGORY_LABELS, CATEGORY_COLORS,
 )
-from obj_3_1 import load_files, get_analysis_selection, delta_r, section
+from obj_3_1_geometric_overlap import load_files, get_analysis_selection, delta_r, section
 
 
 def compute_working_points(score_true, target_efficiencies, colors):

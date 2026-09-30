@@ -49,8 +49,8 @@ from params import (
     CATEGORY_LABELS, CATEGORY_COLORS, CATEGORY_KEYS,
     VARIABLE_PLOT_CONFIG_MET, TAU_MET_VARIABLES,
 )
-from obj_3_1 import section, load_files, get_analysis_selection, delta_r
-from truth_vs_reco_params import (
+from obj_3_1_geometric_overlap import section, load_files, get_analysis_selection, delta_r
+from src.other_code.truth_vs_reco_params import (
     label_jets_and_taus,
     _plot_hist_curves,
     _finish_object_plot,
