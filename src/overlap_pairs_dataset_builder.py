@@ -1,23 +1,39 @@
 """
-================================================================================
-Costruzione del dataset di coppie (jet reco, tau reco) a partire da file
-.root, con:
-  - slicing a livello di analisi (reco reali)
-  - slicing di overlap geometrico (DeltaR < dr_thr)
-  - truth label di coppia indicizzata {FF, FT, TF, TT}
-  - conversione in (X, y, event_id) compatibile col preprocessing esistente
-  - checkpointing chunked (stesso schema di path di checkpoint_io.py)
-  - split train/val/test raggruppato per evento (no data leakage)
-================================================================================
+Build the (reco jet, reco tau) pair dataset for the HH -> bb tau tau study.
+
+Role in the project: starting from the ntuples, this module produces the
+pair-level table on which the b-jet / tau-jet identification is studied
+(objective 3.1, overlap between the two kinds of reconstructed objects)
+and on which the classification quality and the manual combination of
+discriminants are evaluated (objective 3.2). The steps are:
+
+1. select analysis-level jets and taus;
+2. form all (jet, tau) pairs per event and keep the geometrically
+   overlapping ones (DeltaR < ``dr_thr``);
+3. assign each pair a truth index in {FF, FT, TF, TT} (first letter:
+   b-jet truth, second letter: hadronic-tau truth);
+4. flatten to ``(X, y, event_id)``, compatible with the existing
+   preprocessing, and save it in chunks (one per input file) with the same
+   checkpoint path scheme as ``flavour_tag_ml.checkpoint_io``;
+5. split train/val/test grouped by event, to avoid leakage between pairs
+   of the same event.
+
+Identification discriminants (e.g. ``params.JET_SCORE_BRANCH``,
+``params.TAU_ID_SCORE_BRANCH``) can be added to the features through
+``extra_jet_branches`` / ``extra_tau_branches``.
+
+Defaults (branch names, DeltaR threshold, label index, split fractions) are
+defined in ``params.py``.
 """
 
 import os
 from pathlib import Path
 
-import numpy as np
 import awkward as ak
+import numpy as np
 
 import obj_3_1
+import params
 from overlap_kinematics import build_pair_kinematics_and_labels
 
 from flavour_tag_ml.checkpoint_io import (
@@ -29,17 +45,54 @@ from flavour_tag_ml.checkpoint_io import (
 
 
 def select_analysis_objects(tree, n_entries, jet_analysis_branch, tau_analysis_branch):
+    """
+    Build the analysis-level selection masks for jets and taus.
+
+    Parameters
+    ----------
+    tree : uproot.TTree
+        Tree to read the selection branches from.
+
+    n_entries : int
+        Number of events to read.
+
+    jet_analysis_branch, tau_analysis_branch : str
+        Branches holding the per-object analysis flag for jets and taus
+        (e.g. `params.JET_IS_ANALYSIS_BRANCH`, `params.TAU_IS_ANALYSIS_BRANCH`).
+
+    Returns
+    -------
+    jet_sel, tau_sel : ak.Array
+        Jagged selection masks, as returned by
+        `obj_3_1.get_analysis_selection`.
+    """
     jet_sel = obj_3_1.get_analysis_selection(tree, jet_analysis_branch, n_entries)
     tau_sel = obj_3_1.get_analysis_selection(tree, tau_analysis_branch, n_entries)
     return jet_sel, tau_sel
 
 
-DEFAULT_PAIR_LABEL_INDEX = {"FF": 0, "FT": 1, "TF": 2, "TT": 3}
-
-
 def build_pair_truth_index(jet_label_ct, tau_label_ct, label_index_map=None):
+    """
+    Map per-pair jet and tau truth flags to the integer pair label.
+
+    Parameters
+    ----------
+    jet_label_ct, tau_label_ct : ak.Array
+        Truth flags (cast to bool) broadcast to the (event, jet, tau)
+        pair structure. True means a true b-jet / true hadronic tau.
+
+    label_index_map : dict or None, default=None
+        Maps ``"FF"``, ``"FT"``, ``"TF"``, ``"TT"`` to integer labels
+        (first letter: jet, second: tau). None uses
+        `params.PAIR_LABEL_INDEX`.
+
+    Returns
+    -------
+    ak.Array
+        Same structure as the inputs, with int64 labels.
+    """
     if label_index_map is None:
-        label_index_map = DEFAULT_PAIR_LABEL_INDEX
+        label_index_map = params.PAIR_LABEL_INDEX
 
     jet_lab = ak.values_astype(jet_label_ct, bool)
     tau_lab = ak.values_astype(tau_label_ct, bool)
@@ -58,6 +111,28 @@ def build_pair_truth_index(jet_label_ct, tau_label_ct, label_index_map=None):
 
 
 def build_pair_event_index(pair_info, key="jet_pt", file_offset=0):
+    """
+    Assign to every pair the index of the event it belongs to.
+
+    Parameters
+    ----------
+    pair_info : dict of ak.Array
+        Pair-level quantities with (event, jet, tau) structure.
+
+    key : str, default="jet_pt"
+        Entry of `pair_info` used to get the number of events and the
+        structure to broadcast to.
+
+    file_offset : int, default=0
+        Added to the event index so that indices are unique across input
+        files (the builder passes the cumulative number of events already
+        processed).
+
+    Returns
+    -------
+    ak.Array
+        int64 event index with the same structure as ``pair_info[key]``.
+    """
     n_events = len(pair_info[key])
     event_id = ak.Array(np.arange(n_events, dtype=np.int64) + file_offset)
     event_id_ct, _ = ak.broadcast_arrays(event_id, pair_info[key])
@@ -65,6 +140,34 @@ def build_pair_event_index(pair_info, key="jet_pt", file_offset=0):
 
 
 def flatten_pairs_for_ml(pair_info, dr_thr, feature_keys, label_idx_ct, event_id_ct):
+    """
+    Keep the overlapping pairs and flatten them to ML arrays.
+
+    Parameters
+    ----------
+    pair_info : dict of ak.Array
+        Pair-level quantities; must contain ``"pair_dr"`` and every key in
+        `feature_keys`.
+
+    dr_thr : float
+        Pairs with ``pair_dr < dr_thr`` are kept.
+
+    feature_keys : list of str
+        Entries of `pair_info` used as columns of ``X``, in this order.
+
+    label_idx_ct : ak.Array
+        Pair truth index (see `build_pair_truth_index`).
+
+    event_id_ct : ak.Array
+        Pair event index (see `build_pair_event_index`).
+
+    Returns
+    -------
+    X : numpy.ndarray, shape (n_pairs, len(feature_keys)), float32
+    y : numpy.ndarray, shape (n_pairs,), float32
+        Integer pair labels stored as float32.
+    event_id : numpy.ndarray, shape (n_pairs,), int64
+    """
     overlap_mask = pair_info["pair_dr"] < dr_thr
     flat_mask = ak.to_numpy(ak.flatten(overlap_mask, axis=None)).astype(bool)
 
@@ -81,6 +184,26 @@ def flatten_pairs_for_ml(pair_info, dr_thr, feature_keys, label_idx_ct, event_id
 
 
 def _save_pair_chunk(chunk_dir, chunk_idx, X, y, event_id):
+    """
+    Save one chunk of the pair dataset as a compressed ``.npz``.
+
+    Parameters
+    ----------
+    chunk_dir : str or pathlib.Path
+        Chunk directory (created if missing).
+
+    chunk_idx : int
+        Chunk index, used to build the file name via
+        ``flavour_tag_ml.checkpoint_io._chunk_file_path``.
+
+    X, y, event_id : numpy.ndarray
+        Arrays returned by `flatten_pairs_for_ml`.
+
+    Returns
+    -------
+    str or pathlib.Path
+        Path of the written chunk file.
+    """
     os.makedirs(chunk_dir, exist_ok=True)
     chunk_file = _chunk_file_path(chunk_dir, chunk_idx)
     np.savez_compressed(chunk_file, X=X, y=y, event_id=event_id)
@@ -88,6 +211,34 @@ def _save_pair_chunk(chunk_dir, chunk_idx, X, y, event_id):
 
 
 def _save_pair_manifest(manifest_file, chunk_sizes, feature_names, label_index_map, dr_thr, complete):
+    """
+    Write the manifest describing the chunked pair dataset.
+
+    Parameters
+    ----------
+    manifest_file : str or pathlib.Path
+        Manifest path.
+
+    chunk_sizes : list of int
+        Number of pairs in each saved chunk.
+
+    feature_names : list of str
+        Column names of ``X``.
+
+    label_index_map : dict
+        Mapping ``{"FF", "FT", "TF", "TT"} -> int`` used for ``y``.
+
+    dr_thr : float
+        DeltaR threshold used to select the pairs.
+
+    complete : bool
+        False while the build is running (allows resuming/inspection),
+        True once every input file has been processed.
+
+    Returns
+    -------
+    None
+    """
     np.savez_compressed(
         manifest_file,
         chunk_sizes=np.array(chunk_sizes, dtype=np.int64),
@@ -99,6 +250,21 @@ def _save_pair_manifest(manifest_file, chunk_sizes, feature_names, label_index_m
 
 
 def _read_pair_manifest_raw(manifest_file):
+    """
+    Read a manifest written by `_save_pair_manifest`.
+
+    Parameters
+    ----------
+    manifest_file : str or pathlib.Path
+        Manifest path.
+
+    Returns
+    -------
+    dict
+        Keys ``chunk_sizes`` (list of int), ``feature_names`` (list of
+        str), ``label_index_map`` (dict), ``dr_thr`` (float) and
+        ``complete`` (bool).
+    """
     with np.load(manifest_file, allow_pickle=True) as loaded:
         return {
             "chunk_sizes": loaded["chunk_sizes"].tolist(),
@@ -110,6 +276,27 @@ def _read_pair_manifest_raw(manifest_file):
 
 
 def check_pair_checkpoint_progress(save_path, save_name, verbose=True):
+    """
+    Report how many pairs are stored in a pair-dataset checkpoint.
+
+    Parameters
+    ----------
+    save_path : str or pathlib.Path
+        Directory of the checkpoint.
+
+    save_name : str
+        Checkpoint name, used by ``checkpoint_io`` to locate manifest and
+        chunk directory.
+
+    verbose : bool, default=True
+        If True, print the status (COMPLETE/PARTIAL) and the counts.
+
+    Returns
+    -------
+    dict or None
+        None if no manifest exists. Otherwise ``n_done`` (total pairs
+        saved), ``n_chunks`` and ``complete``.
+    """
     manifest_file = _manifest_path(save_path, save_name)
     if not os.path.exists(manifest_file):
         if verbose:
@@ -132,6 +319,41 @@ def check_pair_checkpoint_progress(save_path, save_name, verbose=True):
 
 
 def merge_pair_checkpoint_chunks(save_path, save_name, output_file=None, delete_chunks_after=False, verbose=True):
+    """
+    Concatenate the chunks of a checkpoint into single arrays.
+
+    Parameters
+    ----------
+    save_path, save_name : str
+        Locate the checkpoint (see `check_pair_checkpoint_progress`).
+
+    output_file : str or None, default=None
+        Where to write the merged ``.npz`` (containing X, y, event_id,
+        feature_names, label_index_map, dr_thr):
+
+        - None: ``<save_path>/<save_name>_merged.npz``.
+        - ``""``: nothing is written, arrays are only returned.
+
+    delete_chunks_after : bool, default=False
+        If True and the merged file was written, delete chunk files, the
+        chunk directory (if empty) and the manifest. Ignored when
+        ``output_file=""``.
+
+    verbose : bool, default=True
+        Print shapes and file operations.
+
+    Returns
+    -------
+    X : numpy.ndarray, shape (n_pairs, n_features)
+    y : numpy.ndarray, shape (n_pairs,)
+    event_id : numpy.ndarray, shape (n_pairs,)
+    feature_names : list of str
+
+    Raises
+    ------
+    FileNotFoundError
+        If the manifest does not exist.
+    """
     manifest_file = _manifest_path(save_path, save_name)
     chunk_dir = _chunk_dir_path(save_path, save_name)
 
@@ -178,6 +400,8 @@ def merge_pair_checkpoint_chunks(save_path, save_name, output_file=None, delete_
                 print("CHUNK FILES AND MANIFEST REMOVED:", chunk_dir, "/", manifest_file)
 
     return X, y, event_id, feature_names
+
+
 def build_pair_dataset_from_root(
     save_path, save_name,
     jet_analysis_branch, tau_analysis_branch,
@@ -185,28 +409,113 @@ def build_pair_dataset_from_root(
     tau_eta_branch, tau_phi_branch, tau_pt_branch,
     jet_truth_label_fn, tau_truth_label_fn,
     root_dir=None,
-    jet_truth_label_branch="recojet_antikt4PFlow_HadronConeExclTruthLabelID",
-    tau_truth_label_branch="tau_truth_IsHadronicTau",
+    jet_truth_label_branch=params.JET_TRUTH_LABEL_BRANCH,
+    tau_truth_label_branch=params.TAU_TRUTH_MATCH_BRANCH,
     extra_jet_branches=None,
     extra_tau_branches=None,
-    met_branch="met_met___NOSYS",
-    met_phi_branch="met_phi___NOSYS",
-    compute_pt_ratio=True,
-    compute_met_proj=True,
-    compute_mt=True,
+    met_branch=params.MET_BRANCH,
+    met_phi_branch=params.MET_PHI_BRANCH,
+    compute_pt_ratio=params.COMPUTE_PT_RATIO,
+    compute_met_proj=params.COMPUTE_MET_PROJ,
+    compute_mt=params.COMPUTE_MT,
     feature_keys=None,
-    dr_thr=0.4,
+    dr_thr=params.PAIR_DATASET_DR_THRESHOLD,
     label_index_map=None,
     verbose=True,
 ):
     """
-    Pipeline completa per la creazione del dataset di coppie.
+    Build the chunked (jet, tau) pair dataset from the ``.root`` files.
+
+    For each input file (as listed by `obj_3_1.load_files`): read the
+    needed branches, select analysis-level jets and taus, compute pair
+    kinematics and truth labels with
+    `overlap_kinematics.build_pair_kinematics_and_labels`, keep pairs with
+    ``pair_dr < dr_thr`` and save them as one chunk. The manifest is
+    updated after every chunk (``complete=False``) and marked complete at
+    the end. Files lacking any required branch are skipped.
+
+    Parameters
+    ----------
+    save_path, save_name : str
+        Checkpoint location, resolved through ``checkpoint_io``.
+
+    jet_analysis_branch, tau_analysis_branch : str
+        Per-object analysis flags used for the object selection.
+
+    jet_eta_branch, jet_phi_branch, jet_pt_branch : str
+        Jet kinematic branches.
+
+    tau_eta_branch, tau_phi_branch, tau_pt_branch : str
+        Tau kinematic branches.
+
+    jet_truth_label_fn, tau_truth_label_fn : callable
+        ``fn(a, sel)`` where ``a`` is the ``ak.Array`` of all read
+        branches and ``sel`` the jet (tau) selection mask. Must return the
+        truth flag (True = true b-jet / true hadronic tau) of the selected
+        objects.
+
+    root_dir : str or pathlib.Path or None, default=None
+        If given, overrides ``obj_3_1.ROOT_DIR`` (global side effect on
+        `obj_3_1`); None keeps the value from `params.ROOT_DIR`.
+
+    jet_truth_label_branch : str, default=`params.JET_TRUTH_LABEL_BRANCH`
+        Branch read for the jet truth label (skipped if empty).
+
+    tau_truth_label_branch : str, default=`params.TAU_TRUTH_MATCH_BRANCH`
+        Branch read for the tau truth label (skipped if empty).
+
+    extra_jet_branches, extra_tau_branches : list of str or dict or None, default=None
+        Additional per-object branches (e.g. identification scores) added
+        as pair features. A list is converted to ``{branch: branch}``; in
+        a dict, keys are feature names and values branch names. The keys
+        ``jet_mass`` and ``jet_n_muons`` (jets) and ``tau_nProng``,
+        ``tau_decayMode`` and ``tau_charge`` (taus) are also passed to the
+        pair-kinematics builder; if absent, these quantities are filled
+        with zeros.
+
+    met_branch, met_phi_branch : str, default=`params.MET_BRANCH`, `params.MET_PHI_BRANCH`
+        MET magnitude and azimuth, read only if `compute_met_proj` or
+        `compute_mt` is True.
+
+    compute_pt_ratio : bool, default=`params.COMPUTE_PT_RATIO`
+        Compute ``pair_pt_ratio`` (jet pT / tau pT) and add it to the
+        default features.
+
+    compute_met_proj : bool, default=`params.COMPUTE_MET_PROJ`
+        Compute ``tau_met_proj`` (MET projected on the tau direction) and
+        add it to the default features.
+
+    compute_mt : bool, default=`params.COMPUTE_MT`
+        Compute ``tau_mt`` (tau-MET transverse mass) and add it to the
+        default features.
+
+    feature_keys : list of str or None, default=None
+        Columns of ``X``. None uses `params.PAIR_BASE_FEATURE_KEYS`, plus
+        the enabled optional variables and the keys of the extra
+        branches, without duplicates.
+
+    dr_thr : float, default=`params.PAIR_DATASET_DR_THRESHOLD`
+        Maximum DeltaR of a stored pair.
+
+    label_index_map : dict or None, default=None
+        ``{"FF", "FT", "TF", "TT"} -> int``; None uses
+        `params.PAIR_LABEL_INDEX`.
+
+    verbose : bool, default=True
+        Print per-chunk progress and skipped files.
+
+    Returns
+    -------
+    dict or None
+        None if no ``.root`` file is available. Otherwise
+        ``n_pairs_saved``, ``n_files_processed`` (files actually saved)
+        and ``manifest_file``.
     """
     if root_dir is not None:
         obj_3_1.ROOT_DIR = Path(root_dir)
 
     if label_index_map is None:
-        label_index_map = DEFAULT_PAIR_LABEL_INDEX
+        label_index_map = params.PAIR_LABEL_INDEX
 
     if isinstance(extra_jet_branches, (list, tuple)):
         extra_jet_branches = {b: b for b in extra_jet_branches}
@@ -219,11 +528,7 @@ def build_pair_dataset_from_root(
         extra_tau_branches = {}
 
     if feature_keys is None:
-        feature_keys = [
-            "pair_dr", "pair_deta", "pair_dphi",
-            "jet_pt", "jet_eta", "jet_phi",
-            "tau_pt", "tau_eta", "tau_phi",
-        ]
+        feature_keys = list(params.PAIR_BASE_FEATURE_KEYS)
         if compute_pt_ratio:
             feature_keys.append("pair_pt_ratio")
         if compute_met_proj:
@@ -243,7 +548,6 @@ def build_pair_dataset_from_root(
     chunk_dir = _chunk_dir_path(save_path, save_name)
     os.makedirs(chunk_dir, exist_ok=True)
 
-    # Inclusione esplicita dei branch di verità e cinematici principali
     core_branches = [
         jet_analysis_branch, tau_analysis_branch,
         jet_eta_branch, jet_phi_branch, jet_pt_branch,
@@ -257,8 +561,16 @@ def build_pair_dataset_from_root(
     if (compute_met_proj or compute_mt) and met_branch and met_phi_branch:
         core_branches.extend([met_branch, met_phi_branch])
 
-    extra_branches = [b for b in list(extra_jet_branches.values()) + list(extra_tau_branches.values()) if isinstance(b, str)]
+    extra_branches = [
+        b for b in list(extra_jet_branches.values()) + list(extra_tau_branches.values())
+        if isinstance(b, str)
+    ]
     branches = list(dict.fromkeys(core_branches + extra_branches))
+
+    def optional_branch(a, extra, key, sel, template):
+        if key in extra and isinstance(extra[key], str):
+            return a[extra[key]][sel]
+        return ak.zeros_like(template)
 
     chunk_sizes = []
     chunk_idx = 0
@@ -290,15 +602,16 @@ def build_pair_dataset_from_root(
         tau_phi = a[tau_phi_branch][tau_sel]
         tau_pt = a[tau_pt_branch][tau_sel]
 
-        jet_mass = a[extra_jet_branches["jet_mass"]][jet_sel] if "jet_mass" in extra_jet_branches and isinstance(extra_jet_branches["jet_mass"], str) else ak.zeros_like(jet_pt)
-        jet_n_muons = a[extra_jet_branches["jet_n_muons"]][jet_sel] if "jet_n_muons" in extra_jet_branches and isinstance(extra_jet_branches["jet_n_muons"], str) else ak.zeros_like(jet_pt)
+        jet_mass = optional_branch(a, extra_jet_branches, "jet_mass", jet_sel, jet_pt)
+        jet_n_muons = optional_branch(a, extra_jet_branches, "jet_n_muons", jet_sel, jet_pt)
 
-        tau_nProng = a[extra_tau_branches["tau_nProng"]][tau_sel] if "tau_nProng" in extra_tau_branches and isinstance(extra_tau_branches["tau_nProng"], str) else ak.zeros_like(tau_pt)
-        tau_decayMode = a[extra_tau_branches["tau_decayMode"]][tau_sel] if "tau_decayMode" in extra_tau_branches and isinstance(extra_tau_branches["tau_decayMode"], str) else ak.zeros_like(tau_pt)
-        tau_charge = a[extra_tau_branches["tau_charge"]][tau_sel] if "tau_charge" in extra_tau_branches and isinstance(extra_tau_branches["tau_charge"], str) else ak.zeros_like(tau_pt)
+        tau_nProng = optional_branch(a, extra_tau_branches, "tau_nProng", tau_sel, tau_pt)
+        tau_decayMode = optional_branch(a, extra_tau_branches, "tau_decayMode", tau_sel, tau_pt)
+        tau_charge = optional_branch(a, extra_tau_branches, "tau_charge", tau_sel, tau_pt)
 
-        met_val = a[met_branch] if ((compute_met_proj or compute_mt) and met_branch in a.fields) else None
-        met_phi_val = a[met_phi_branch] if ((compute_met_proj or compute_mt) and met_phi_branch in a.fields) else None
+        use_met = compute_met_proj or compute_mt
+        met_val = a[met_branch] if (use_met and met_branch in a.fields) else None
+        met_phi_val = a[met_phi_branch] if (use_met and met_phi_branch in a.fields) else None
 
         pair_info = build_pair_kinematics_and_labels(
             jet_pt, jet_eta, jet_phi, jet_mass, jet_n_muons, jet_label,
@@ -350,7 +663,47 @@ def build_pair_dataset_from_root(
         "manifest_file": manifest_file,
     }
 
-def split_pairs_by_event(event_id, train_frac=0.7, val_frac=0.15, test_frac=0.15, seed=42):
+
+def split_pairs_by_event(
+    event_id,
+    train_frac=params.SPLIT_TRAIN_FRAC,
+    val_frac=params.SPLIT_VAL_FRAC,
+    test_frac=params.SPLIT_TEST_FRAC,
+    seed=params.SPLIT_SEED,
+):
+    """
+    Split pairs into train/val/test sets grouped by event.
+
+    Unique events are shuffled and assigned to the three sets, so all
+    pairs of one event end up in the same set (no leakage between pairs
+    that share an event). The fractions therefore refer to events, not to
+    pairs: the resulting pair fractions are only approximately equal to
+    them.
+
+    Parameters
+    ----------
+    event_id : numpy.ndarray
+        Event index of each pair (see `build_pair_event_index`).
+
+    train_frac, val_frac, test_frac : float
+        Fractions of events in each set; must sum to 1. Defaults are
+        `params.SPLIT_TRAIN_FRAC`, `params.SPLIT_VAL_FRAC`,
+        `params.SPLIT_TEST_FRAC`. The test set takes the remaining events
+        after rounding.
+
+    seed : int, default=`params.SPLIT_SEED`
+        Seed of the random generator.
+
+    Returns
+    -------
+    train_idx, val_idx, test_idx : numpy.ndarray
+        Indices of the pairs belonging to each set.
+
+    Raises
+    ------
+    ValueError
+        If the three fractions do not sum to 1.
+    """
     if not np.isclose(train_frac + val_frac + test_frac, 1.0):
         raise ValueError("train_frac + val_frac + test_frac deve essere 1.0")
 
