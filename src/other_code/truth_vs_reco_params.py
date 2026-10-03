@@ -59,7 +59,7 @@ from params import (
     JET_SELECTION_MODE, JET_BTAG_BRANCH,
     JET_ETA_BRANCH, JET_PHI_BRANCH, JET_PT_BRANCH, JET_IS_ANALYSIS_BRANCH,
     JET_TRUTH_LABEL_BRANCH, JET_TRUTH_LABEL_B_VALUE,
-    TAU_SELECTION_MODE, TAU_SCORE_BRANCH, TAU_SCORE_WP85_THRESHOLD,
+    TAU_SELECTION_MODE, TAU_EFF_SCORE_BRANCH, TAU_SCORE_WP85_THRESHOLD,
     TAU_ETA_BRANCH, TAU_PHI_BRANCH, TAU_PT_BRANCH, TAU_IS_ANALYSIS_BRANCH,
     TRUTH_MODE_TAU, TAU_TRUTH_MATCH_BRANCH,
     TRUTH_TAU_ETA_BRANCH, TRUTH_TAU_PHI_BRANCH, DR_TRUTH_MATCH_TAU,
@@ -1063,7 +1063,7 @@ def main():
         branches.append(JET_BTAG_BRANCH)
 
     if TAU_SELECTION_MODE == "score85":
-        branches.append(TAU_SCORE_BRANCH)
+        branches.append(TAU_EFF_SCORE_BRANCH)
 
     if TRUTH_MODE_TAU == "label":
         branches.append(TAU_TRUTH_MATCH_BRANCH)
@@ -1118,7 +1118,7 @@ def main():
             tau_sel = tau_sel_analysis
         else:
             tau_score_sel = ak.fill_none(
-                a[TAU_SCORE_BRANCH], -np.inf
+                a[TAU_EFF_SCORE_BRANCH], -np.inf
             ) >= TAU_SCORE_WP85_THRESHOLD
             tau_sel = tau_sel_analysis & tau_score_sel
 

@@ -119,7 +119,7 @@ VALID_JET_SELECTION_MODES = {"all", "btag85"}
 # "score85": analysis-level taus above the 85% WP threshold on the
 #            GNTauScoreSigTrans_v0prune score.
 TAU_SELECTION_MODE = "all"
-TAU_SCORE_BRANCH = "tau_GNTauScoreSigTrans_v0prune"
+TAU_EFF_SCORE_BRANCH = "tau_GNTauScoreSigTrans_v0prune"
 TAU_SCORE_WP85_THRESHOLD = 0.163094
 VALID_TAU_SELECTION_MODES = {"all", "score85"}
 
@@ -478,8 +478,9 @@ CORR_TAU_SCORE_MIN = -10.0
 # TAGGER PERFORMANCE (tau_score_analysis.py, bjet_quantile_analysis.py)
 # ======================================================================
 
-# Location of the flavour_tagging repository (provides src.graphics).
-FLAVOUR_TAGGING_DIR = Path("../flavour_tagging")
+# Not used anymore: package imported via pip
+# # Location of the flavour_tagging repository (provides src.graphics).
+# FLAVOUR_TAGGING_DIR = Path("../flavour_tagging")
 
 # Number of thresholds scanned between the minimum and maximum score.
 N_SCAN_POINTS = 400

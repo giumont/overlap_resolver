@@ -55,7 +55,6 @@ except Exception:
 import params
 from obj_3_1_geometric_overlap import section, load_files, get_analysis_selection, summarize
 
-sys.path.append(str(params.FLAVOUR_TAGGING_DIR))
 from flavour_tag_ml.graphics import (
     plot_roc_curve,
     plot_background_rejection,

@@ -65,7 +65,8 @@ from params import (
     JET_ETA_BRANCH, JET_PHI_BRANCH, JET_IS_ANALYSIS_BRANCH,
     TAU_ETA_BRANCH, TAU_PHI_BRANCH, TAU_IS_ANALYSIS_BRANCH,
     JET_SELECTION_MODE, JET_BTAG_BRANCH,
-    TAU_SELECTION_MODE, TAU_SCORE_BRANCH, TAU_SCORE_WP85_THRESHOLD,
+    TAU_SELECTION_MODE, TAU_EFF_SCORE_BRANCH, TAU_SCORE_WP85_THRESHOLD,
+    TRUTH_MODE_TAU, TAU_TRUTH_MATCH_BRANCH, TRUTH_TAU_ETA_BRANCH, TRUTH_TAU_PHI_BRANCH,
     DR_THRESHOLDS, DR_HIST_MIN, DR_HIST_MAX, DR_HIST_BINSIZE,
     NORMALIZE_DR_HISTOGRAMS, OUTPUT_DIR_DR, PLOT_ETA_PHI,
     ETA_HIST_MIN, ETA_HIST_MAX, ETA_HIST_BINSIZE,
@@ -177,7 +178,6 @@ def load_files():
 
     return loaded
 
-
 def get_analysis_selection(tree, selection_branch, n_entries):
     """
     Read an ``isAnalysis...`` branch as a boolean mask.
@@ -203,6 +203,91 @@ def get_analysis_selection(tree, selection_branch, n_entries):
     selection = ak.fill_none(selection, 0)
 
     return selection != 0
+
+
+def required_branches(base, include_truth=False):
+    """
+    Extend a list of always-needed branches with those required by the
+    configuration in ``params.py``.
+
+    Parameters
+    ----------
+    base : list of str
+        Branches the calling script always needs.
+
+    include_truth : bool, default=False
+        If True, also add the tau truth branches required by
+        ``TRUTH_MODE_TAU`` (``TAU_TRUTH_MATCH_BRANCH`` for ``"label"``,
+        ``TRUTH_TAU_ETA_BRANCH`` and ``TRUTH_TAU_PHI_BRANCH`` for
+        ``"geometric"``). Only scripts that assign truth labels need
+        this.
+
+    Returns
+    -------
+    list of str
+        ``base`` plus ``JET_BTAG_BRANCH`` if ``JET_SELECTION_MODE`` is
+        ``"btag85"``, ``TAU_EFF_SCORE_BRANCH`` if ``TAU_SELECTION_MODE``
+        is ``"score85"``, and the truth branches if requested. A new
+        list is returned; ``base`` is not modified.
+    """
+    branches = list(base)
+
+    if JET_SELECTION_MODE == "btag85":
+        branches.append(JET_BTAG_BRANCH)
+
+    if TAU_SELECTION_MODE == "score85":
+        branches.append(TAU_EFF_SCORE_BRANCH)
+
+    if include_truth:
+        if TRUTH_MODE_TAU == "label":
+            branches.append(TAU_TRUTH_MATCH_BRANCH)
+        elif TRUTH_MODE_TAU == "geometric":
+            branches.extend([TRUTH_TAU_ETA_BRANCH, TRUTH_TAU_PHI_BRANCH])
+
+    return branches
+
+
+def build_selections(a, tree, n_entries):
+    """
+    Build the jet and tau selection masks for the configured modes.
+
+    Starts from the analysis-level flags and, depending on
+    ``JET_SELECTION_MODE`` / ``TAU_SELECTION_MODE``, adds the b-tag
+    working point requirement (``"btag85"``) and/or the tau score
+    working point requirement (``"score85"``). Validation of the mode
+    values is done in ``params.py``.
+
+    Parameters
+    ----------
+    a : awkward.Array
+        Branches read for the file; must contain the b-tag / tau score
+        branch when the corresponding mode needs it (see
+        `required_branches`).
+
+    tree : uproot.TTree
+        Tree the analysis-level flags are read from.
+
+    n_entries : int
+        Number of events read.
+
+    Returns
+    -------
+    jet_sel, tau_sel : awkward.Array of bool
+        Per-object selection masks, shape ``[event][jet]`` and
+        ``[event][tau]``.
+    """
+    jet_sel = get_analysis_selection(tree, JET_IS_ANALYSIS_BRANCH, n_entries)
+    tau_sel = get_analysis_selection(tree, TAU_IS_ANALYSIS_BRANCH, n_entries)
+
+    if JET_SELECTION_MODE == "btag85":
+        jet_sel = jet_sel & (ak.fill_none(a[JET_BTAG_BRANCH], False) != 0)
+
+    if TAU_SELECTION_MODE == "score85":
+        tau_sel = tau_sel & (
+            ak.fill_none(a[TAU_EFF_SCORE_BRANCH], -np.inf) >= TAU_SCORE_WP85_THRESHOLD
+        )
+
+    return jet_sel, tau_sel
 
 
 def delta_phi(phi1, phi2):
@@ -617,20 +702,14 @@ def analyze_jet_tau_overlap(loaded):
     None
         Results are printed and plots are saved to ``OUTPUT_DIR_DR``.
     """
-    branches = [
+    branches = required_branches([
         TAU_ETA_BRANCH,
         TAU_PHI_BRANCH,
         TAU_IS_ANALYSIS_BRANCH,
         JET_ETA_BRANCH,
         JET_PHI_BRANCH,
         JET_IS_ANALYSIS_BRANCH,
-    ]
-
-    if JET_SELECTION_MODE != "all":
-        branches.append(JET_BTAG_BRANCH)
-
-    if TAU_SELECTION_MODE != "all":
-        branches.append(TAU_SCORE_BRANCH)
+    ])
 
     aggregate_events = 0
 
@@ -676,21 +755,7 @@ def analyze_jet_tau_overlap(loaded):
         n_events = len(a[TAU_ETA_BRANCH])
         aggregate_events += n_events
 
-        tau_sel_analysis = get_analysis_selection(tree, TAU_IS_ANALYSIS_BRANCH, n_entries)
-
-        if TAU_SELECTION_MODE == "all":
-            tau_sel = tau_sel_analysis
-        else:
-            tau_score_sel = ak.fill_none(a[TAU_SCORE_BRANCH], -np.inf) >= TAU_SCORE_WP85_THRESHOLD
-            tau_sel = tau_sel_analysis & tau_score_sel
-
-        jet_sel_analysis = get_analysis_selection(tree, JET_IS_ANALYSIS_BRANCH, n_entries)
-
-        if JET_SELECTION_MODE == "all":
-            jet_sel = jet_sel_analysis
-        else:
-            jet_btag_sel = ak.fill_none(a[JET_BTAG_BRANCH], False) != 0
-            jet_sel = jet_sel_analysis & jet_btag_sel
+        jet_sel, tau_sel = build_selections(a, tree, n_entries)
 
         tau_eta = a[TAU_ETA_BRANCH][tau_sel]
         tau_phi = a[TAU_PHI_BRANCH][tau_sel]

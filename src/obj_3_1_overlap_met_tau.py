@@ -42,14 +42,15 @@ from params import (
     JET_ETA_BRANCH, JET_PHI_BRANCH, JET_IS_ANALYSIS_BRANCH,
     TAU_ETA_BRANCH, TAU_PHI_BRANCH, TAU_PT_BRANCH, TAU_IS_ANALYSIS_BRANCH,
     MET_BRANCH, MET_PHI_BRANCH,
-    JET_SELECTION_MODE, JET_BTAG_BRANCH,
-    TAU_SELECTION_MODE, TAU_SCORE_BRANCH, TAU_SCORE_WP85_THRESHOLD,
-    JET_TRUTH_LABEL_BRANCH, TAU_TRUTH_MATCH_BRANCH,
+    JET_SELECTION_MODE, TAU_SELECTION_MODE,
+    JET_TRUTH_LABEL_BRANCH,
     DR_THRESHOLD_KINEMATICS, NORMALIZE_PAIR_HISTOGRAMS,
     CATEGORY_LABELS, CATEGORY_COLORS, CATEGORY_KEYS,
     VARIABLE_PLOT_CONFIG_MET, TAU_MET_VARIABLES,
 )
-from obj_3_1_geometric_overlap import section, load_files, get_analysis_selection, delta_r
+from obj_3_1_geometric_overlap import (
+    section, load_files, delta_r, required_branches, build_selections,
+)
 from src.other_code.truth_vs_reco_params import (
     label_jets_and_taus,
     _plot_hist_curves,
@@ -340,8 +341,10 @@ def main():
     compute MET_parallel and m_T for each selected tau, build the
     jet-tau pairs and keep the overlapping ones by truth category. The
     per-file results are merged and plotted. Files missing any required
-    branch are skipped. Unlike the other scripts, the b-tag score, tau
-    score and truth branches are always required.
+    branch are skipped. The b-tag score, tau score and tau truth
+    branches are required only if ``JET_SELECTION_MODE``,
+    ``TAU_SELECTION_MODE`` and ``TRUTH_MODE_TAU`` need them, as in the
+    other scripts.
 
     Returns
     -------
@@ -351,13 +354,15 @@ def main():
     if not loaded:
         return
 
-    branches = [
-        TAU_ETA_BRANCH, TAU_PHI_BRANCH, TAU_PT_BRANCH, TAU_IS_ANALYSIS_BRANCH,
-        JET_ETA_BRANCH, JET_PHI_BRANCH, JET_IS_ANALYSIS_BRANCH,
-        JET_BTAG_BRANCH, JET_TRUTH_LABEL_BRANCH,
-        TAU_SCORE_BRANCH, TAU_TRUTH_MATCH_BRANCH,
-        MET_BRANCH, MET_PHI_BRANCH,
-    ]
+    branches = required_branches(
+        [
+            TAU_ETA_BRANCH, TAU_PHI_BRANCH, TAU_PT_BRANCH, TAU_IS_ANALYSIS_BRANCH,
+            JET_ETA_BRANCH, JET_PHI_BRANCH, JET_IS_ANALYSIS_BRANCH,
+            JET_TRUTH_LABEL_BRANCH,
+            MET_BRANCH, MET_PHI_BRANCH,
+        ],
+        include_truth=True,
+    )
 
     pair_met_parts = []
 
@@ -370,24 +375,7 @@ def main():
 
         a = tree.arrays(branches, entry_stop=n_entries, library="ak")
 
-        jet_sel_analysis = get_analysis_selection(tree, JET_IS_ANALYSIS_BRANCH, n_entries)
-        tau_sel_analysis = get_analysis_selection(tree, TAU_IS_ANALYSIS_BRANCH, n_entries)
-
-        if JET_SELECTION_MODE == "all":
-            jet_sel = jet_sel_analysis
-        elif JET_SELECTION_MODE == "btag85":
-            jet_sel = jet_sel_analysis & (ak.fill_none(a[JET_BTAG_BRANCH], False) != 0)
-        else:
-            raise ValueError("JET_SELECTION_MODE non valido. Scegli 'all' o 'btag85'.")
-
-        if TAU_SELECTION_MODE == "all":
-            tau_sel = tau_sel_analysis
-        elif TAU_SELECTION_MODE == "score85":
-            tau_sel = tau_sel_analysis & (
-                ak.fill_none(a[TAU_SCORE_BRANCH], -np.inf) >= TAU_SCORE_WP85_THRESHOLD
-            )
-        else:
-            raise ValueError("TAU_SELECTION_MODE non valido. Scegli 'all' o 'score85'.")
+        jet_sel, tau_sel = build_selections(a, tree, n_entries)
 
         jet_label, tau_label, _, _ = label_jets_and_taus(a, jet_sel, tau_sel)
 
